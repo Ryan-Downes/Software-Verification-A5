@@ -1,0 +1,215 @@
+-- CSC410 Assignment 5 Q1 (Due: Nov 20, 2017)
+-- Harman/ Steven/ Michael/ Ryan
+-- Four soldiers must cross a bridge (at most 2 at a time) using a single shared torch
+-- Their times to cross are 5, 10, 20, 25 respectively
+-- What's the fastest time they can all cross in?
+
+-- Implementation:
+      -- 1. Convert state number to 4 digit binary (e.g. s9 = 1001)
+      -- 2. The leftmost bit represents soldier 1's location, second from left is soldier 2, etc.
+      -- 3. If a soldier's bit is 0, that soldier is on the enemy side (1 implies friendly side) of bridge
+      -- 4. We start on s0 (all solders on enemy side) and seek to end on s15 (all on friendly side)
+
+MODULE main
+
+   -- Variable List
+   VAR
+      elapsed : 0..61;                  -- Time elapsed (minutes) [When the transitions exceed 60, we lock elapsed to 61]
+      torch : boolean;                  -- 1 iff torch on friendly side, 0 iff torch on enemy side
+      loc : {null, s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15};
+
+   -- Variable Assignments
+   ASSIGN
+      -- Inits
+      init(elapsed) := 0;               -- Initialize time elapsed (minutes)
+      init(torch) := FALSE;             -- Torch starts on enemy side
+      init(loc) := s0;                  -- Start at 0000 (all four soldiers on enemy side)
+
+      -- Transitions
+      -- Each transition: Torch always moving, and 1 or 2 soldiers moving
+      next(loc) :=                 -- Move to next state in the set of valid state transitions
+      case
+         -- Torch was on friendly side
+         torch & (loc = s0)   : {null};
+         torch & (loc = s1)   : {s0};
+         torch & (loc = s2)   : {s0};
+         torch & (loc = s3)   : {s0, s1, s2};
+         torch & (loc = s4)   : {s0};
+         torch & (loc = s5)   : {s0, s1, s4};
+         torch & (loc = s6)   : {s0, s2, s4};
+         torch & (loc = s7)   : {s1, s2, s3, s4, s5, s6};
+         torch & (loc = s8)   : {s0};
+         torch & (loc = s9)   : {s0, s1, s8};
+         torch & (loc = s10)  : {s0, s2, s8};
+         torch & (loc = s11)  : {s1, s2, s3, s8, s9, s10};
+         torch & (loc = s12)  : {s0, s4, s8};
+         torch & (loc = s13)  : {s1, s4, s5, s8, s9, s12};
+         torch & (loc = s14)  : {s2, s4, s6, s8, s10, s12};
+         torch & (loc = s15)  : {s15}; -- Epsilon transition into end state (self looping)
+
+         -- Torch was on enemy side
+         !torch & (loc = s0)  : {s12, s10, s9, s8, s6, s5, s4, s3, s2, s1};
+         !torch & (loc = s1)  : {s13, s11, s9, s7, s5, s3};
+         !torch & (loc = s2)  : {s14, s11, s10, s7, s6, s3};
+         !torch & (loc = s3)  : {s15, s11, s7};
+         !torch & (loc = s4)  : {s14, s13, s12, s7, s6, s5};
+         !torch & (loc = s5)  : {s15, s13, s7};
+         !torch & (loc = s6)  : {s15, s14, s7};
+         !torch & (loc = s7)  : {s15};
+         !torch & (loc = s8)  : {s14, s13, s12, s11, s10, s9};
+         !torch & (loc = s9)  : {s15, s13, s11};
+         !torch & (loc = s10) : {s15, s14, s11};
+         !torch & (loc = s11) : {s15};
+         !torch & (loc = s12) : {s15, s14, s13};
+         !torch & (loc = s13) : {s15};
+         !torch & (loc = s14) : {s15};
+         !torch & (loc = s15) : {null};
+
+         -- Else, no more transitions can be made
+         TRUE                 : {null};
+      esac;
+
+      next(torch) :=                    -- Torch must cross the bridge every transition
+      case
+         loc = null :  torch;
+         loc = s15  :  torch;
+         TRUE       : !torch;
+      esac;
+
+      next(elapsed) :=                  -- Increment elapsed time based on chosen transition
+      case
+         (loc = s0) & (next(loc) = s12)  & (elapsed + t[2] <= 60): elapsed + t[2];
+         (loc = s0) & (next(loc) = s10)  & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s0) & (next(loc) = s9)   & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s0) & (next(loc) = s8)   & (elapsed + t[1] <= 60) : elapsed + t[1];
+         (loc = s0) & (next(loc) = s6)   & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s0) & (next(loc) = s5)   & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s0) & (next(loc) = s4)   & (elapsed + t[2] <= 60) : elapsed + t[2];
+         (loc = s0) & (next(loc) = s3)   & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s0) & (next(loc) = s2)   & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s0) & (next(loc) = s1)   & (elapsed + t[4] <= 60) : elapsed + t[4];
+
+         (loc = s1) & (next(loc) = s0)   & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s1) & (next(loc) = s13)  & (elapsed + t[2] <= 60) : elapsed + t[2];
+         (loc = s1) & (next(loc) = s11)  & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s1) & (next(loc) = s9)   & (elapsed + t[1] <= 60) : elapsed + t[1];
+         (loc = s1) & (next(loc) = s7)   & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s1) & (next(loc) = s5)   & (elapsed + t[2] <= 60) : elapsed + t[2];
+         (loc = s1) & (next(loc) = s3)   & (elapsed + t[3] <= 60) : elapsed + t[3];
+         
+         (loc = s2) & (next(loc) = s0)   & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s2) & (next(loc) = s14)  & (elapsed + t[2] <= 60) : elapsed + t[2];
+         (loc = s2) & (next(loc) = s11)  & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s2) & (next(loc) = s10)  & (elapsed + t[1] <= 60) : elapsed + t[1];
+         (loc = s2) & (next(loc) = s7)   & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s2) & (next(loc) = s6)   & (elapsed + t[2] <= 60) : elapsed + t[2];
+         (loc = s2) & (next(loc) = s3)   & (elapsed + t[3] <= 60) : elapsed + t[3];
+         
+         (loc = s3) & (next(loc) = s0)   & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s3) & (next(loc) = s1)   & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s3) & (next(loc) = s2)   & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s3) & (next(loc) = s15)  & (elapsed + t[2] <= 60) : elapsed + t[2];
+         (loc = s3) & (next(loc) = s11)  & (elapsed + t[1] <= 60) : elapsed + t[1];
+         (loc = s3) & (next(loc) = s7)   & (elapsed + t[2] <= 60) : elapsed + t[2];
+         
+         (loc = s4) & (next(loc) = s0)   & (elapsed + t[2] <= 60) : elapsed + t[2];
+         (loc = s4) & (next(loc) = s14)  & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s4) & (next(loc) = s13)  & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s4) & (next(loc) = s12)  & (elapsed + t[1] <= 60) : elapsed + t[1];
+         (loc = s4) & (next(loc) = s7)   & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s4) & (next(loc) = s6)   & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s4) & (next(loc) = s5)   & (elapsed + t[4] <= 60) : elapsed + t[4];
+         
+         (loc = s5) & (next(loc) = s0)   & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s5) & (next(loc) = s1)   & (elapsed + t[2] <= 60) : elapsed + t[2];
+         (loc = s5) & (next(loc) = s4)   & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s5) & (next(loc) = s15)  & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s5) & (next(loc) = s13)  & (elapsed + t[1] <= 60) : elapsed + t[1];
+         (loc = s5) & (next(loc) = s7)   & (elapsed + t[3] <= 60) : elapsed + t[3];
+         
+         (loc = s6) & (next(loc) = s0)   & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s6) & (next(loc) = s2)   & (elapsed + t[2] <= 60) : elapsed + t[2];
+         (loc = s6) & (next(loc) = s4)   & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s6) & (next(loc) = s15)  & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s6) & (next(loc) = s14)  & (elapsed + t[1] <= 60) : elapsed + t[1];
+         (loc = s6) & (next(loc) = s7)   & (elapsed + t[4] <= 60) : elapsed + t[4];
+         
+         (loc = s7) & (next(loc) = s1)   & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s7) & (next(loc) = s2)   & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s7) & (next(loc) = s3)   & (elapsed + t[2] <= 60) : elapsed + t[2];
+         (loc = s7) & (next(loc) = s4)   & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s7) & (next(loc) = s5)   & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s7) & (next(loc) = s6)   & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s7) & (next(loc) = s15)  & (elapsed + t[1] <= 60) : elapsed + t[1];
+         
+         (loc = s8) & (next(loc) = s0)   & (elapsed + t[1] <= 60) : elapsed + t[1];
+         (loc = s8) & (next(loc) = s14)  & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s8) & (next(loc) = s13)  & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s8) & (next(loc) = s12)  & (elapsed + t[2] <= 60) : elapsed + t[2];
+         (loc = s8) & (next(loc) = s11)  & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s8) & (next(loc) = s10)  & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s8) & (next(loc) = s9)   & (elapsed + t[4] <= 60) : elapsed + t[4];
+         
+         (loc = s9) & (next(loc) = s0)   & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s9) & (next(loc) = s1)   & (elapsed + t[1] <= 60) : elapsed + t[1];
+         (loc = s9) & (next(loc) = s8)   & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s9) & (next(loc) = s15)  & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s9) & (next(loc) = s13)  & (elapsed + t[2] <= 60) : elapsed + t[2];
+         (loc = s9) & (next(loc) = s11)  & (elapsed + t[3] <= 60) : elapsed + t[3];
+         
+         (loc = s10) & (next(loc) = s0)  & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s10) & (next(loc) = s2)  & (elapsed + t[1] <= 60) : elapsed + t[1];
+         (loc = s10) & (next(loc) = s8)  & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s10) & (next(loc) = s15) & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s10) & (next(loc) = s14) & (elapsed + t[2] <= 60) : elapsed + t[2];
+         (loc = s10) & (next(loc) = s11) & (elapsed + t[4] <= 60) : elapsed + t[4];
+         
+         (loc = s11) & (next(loc) = s1)  & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s11) & (next(loc) = s2)  & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s11) & (next(loc) = s3)  & (elapsed + t[1] <= 60) : elapsed + t[1];
+         (loc = s11) & (next(loc) = s8)  & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s11) & (next(loc) = s9)  & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s11) & (next(loc) = s10) & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s11) & (next(loc) = s15) & (elapsed + t[2] <= 60) : elapsed + t[2];
+         
+         (loc = s12) & (next(loc) = s0)  & (elapsed + t[2] <= 60) : elapsed + t[2];
+         (loc = s12) & (next(loc) = s4)  & (elapsed + t[1] <= 60) : elapsed + t[1];
+         (loc = s12) & (next(loc) = s8)  & (elapsed + t[2] <= 60) : elapsed + t[2];
+         (loc = s12) & (next(loc) = s15) & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s12) & (next(loc) = s14) & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s12) & (next(loc) = s13) & (elapsed + t[4] <= 60) : elapsed + t[4];
+         
+         (loc = s13) & (next(loc) = s1)  & (elapsed + t[2] <= 60) : elapsed + t[2];
+         (loc = s13) & (next(loc) = s4)  & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s13) & (next(loc) = s5)  & (elapsed + t[1] <= 60) : elapsed + t[1];
+         (loc = s13) & (next(loc) = s8)  & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s13) & (next(loc) = s9)  & (elapsed + t[2] <= 60) : elapsed + t[2];
+         (loc = s13) & (next(loc) = s12) & (elapsed + t[4] <= 60) : elapsed + t[4];
+         (loc = s13) & (next(loc) = s15) & (elapsed + t[3] <= 60) : elapsed + t[3];
+         
+         (loc = s14) & (next(loc) = s2)  & (elapsed + t[2] <= 60) : elapsed + t[2];
+         (loc = s14) & (next(loc) = s4)  & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s14) & (next(loc) = s6)  & (elapsed + t[1] <= 60) : elapsed + t[1];
+         (loc = s14) & (next(loc) = s8)  & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s14) & (next(loc) = s10) & (elapsed + t[2] <= 60) : elapsed + t[2];
+         (loc = s14) & (next(loc) = s12) & (elapsed + t[3] <= 60) : elapsed + t[3];
+         (loc = s14) & (next(loc) = s15) & (elapsed + t[4] <= 60) : elapsed + t[4];
+         
+         loc = s15                                                : elapsed;
+
+         TRUE                            : 61; -- Chosen transition is s.t. elapsed > 60, lock to 61
+      esac;
+
+   DEFINE
+      t[1] := 5;                        -- Soldier 1 crosses in 5  minutes
+      t[2] := 10;                       -- Soldier 2 crosses in 10 minutes
+      t[3] := 20;                       -- Soldier 3 crosses in 20 minutes
+      t[4] := 25;                       -- Soldier 4 crosses in 25 minutes
+
+   -- LTL Properties
+   -- (B) - Yes
+   -- (C) - Get model checker to give the step-by-step scenario for which all soldiers cross
+   LTLSPEC G ! ((X torch = !torch) U (loc = s15))
+   -- (D) - Yes (move 3 of them over)
+   -- (E) - Same as (C), except ensure the given scenario is within 60 minutes
+   LTLSPEC G ! ((X torch = !torch) U (loc = s15 & elapsed < 61))
